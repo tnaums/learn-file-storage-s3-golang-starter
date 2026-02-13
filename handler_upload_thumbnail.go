@@ -34,8 +34,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	const maxMemory = 10 << 20
 	r.ParseMultipartForm(maxMemory)
 
-	mediaType := r.headers.get("content-type")
-	b, _ := io.ReadAll(r.Body)
+
 
 	// "thumbnail" should match the HTML form input name
 	file, header, err := r.FormFile("thumbnail")
@@ -45,5 +44,19 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 	defer file.Close()
 
+	mediaType := r.headers.get("content-type")
+	b, _ := io.ReadAll(file)
+
+	videoData, err := cfg.db.GetVideo(videoID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Unable to find video in database", err)
+	}
+
+	newThumbnail := thumbnail{
+		data: b,
+		mediaType: mediaType,
+	}
+	videoThumbnails[videoID] = newThumbnail
+	
 	respondWithJSON(w, http.StatusOK, struct{}{})
 }
