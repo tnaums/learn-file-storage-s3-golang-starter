@@ -1,0 +1,18 @@
+You've made great progress! Fixing that URL assignment and pulling the Content-Type from the file header were the big hurdles.
+
+There are just two important pieces left to ensure your code is secure and doesn't crash:
+
+    Ownership Check: You need to verify that the person uploading the thumbnail actually owns the video. You have the userID from the token and the videoData from the database. How can you check if videoData.UserID matches the userID from the JWT? If they don't match, you should return an unauthorized error and stop execution.
+    The "Return" Pattern: In Go web handlers, when you call respondWithError, it doesn't automatically stop the function. It just writes the error to the response. You need to explicitly return immediately after so the rest of the code doesn't try to run with invalid data.
+
+For example, look at this block in your code:
+
+videoData, err := cfg.db.GetVideo(videoID)
+if err != nil {
+    respondWithError(w, http.StatusBadRequest, "Unable to find video in database", err)
+    // What happens if we don't return here and try to use videoData below?
+}
+
+If GetVideo fails, videoData might be nil, and the code will panic when it tries to access fields on it later.
+
+Can you add those return statements to your error blocks and implement the ownership check? Once that's done, you should be ready to run those tests!
