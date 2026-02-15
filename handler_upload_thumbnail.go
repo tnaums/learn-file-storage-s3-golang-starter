@@ -46,7 +46,8 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
 	//	mediaType := r.Header.Get("content-type")
 	b, _ := io.ReadAll(file)
-	encoded := base64.StdEncoding.EncodeToStrint([]byte(b))
+	encoded := base64.StdEncoding.EncodeToString([]byte(b))
+	dataURL := fmt.Sprintf("data:%s;base64,%s", the_string_i_want, encoded)
 	
 	videoData, err := cfg.db.GetVideo(videoID)
 	if err != nil {
@@ -59,13 +60,13 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	
-	newThumbnail := thumbnail{
-		data:      b,
-		mediaType: the_string_i_want,
-	}
-	videoThumbnails[videoID] = newThumbnail
-	newURL := fmt.Sprintf("http://localhost:%s/api/thumbnails/%s", cfg.port, videoID)
-	videoData.ThumbnailURL = &newURL
+	// newThumbnail := thumbnail{
+	// 	data:      b,
+	// 	mediaType: the_string_i_want,
+	// }
+	// videoThumbnails[videoID] = newThumbnail
+	//	newURL := fmt.Sprintf("http://localhost:%s/api/thumbnails/%s", cfg.port, videoID)
+	videoData.ThumbnailURL = &dataURL
 	err = cfg.db.UpdateVideo(videoData)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Unable to update video with new url", err)
