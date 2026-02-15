@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -45,7 +46,8 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
 	//	mediaType := r.Header.Get("content-type")
 	b, _ := io.ReadAll(file)
-
+	encoded := base64.StdEncoding.EncodeToStrint([]byte(b))
+	
 	videoData, err := cfg.db.GetVideo(videoID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Unable to find video in database", err)
