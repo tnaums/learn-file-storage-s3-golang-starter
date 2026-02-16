@@ -46,8 +46,11 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
 	//	mediaType := r.Header.Get("content-type")
 	b, _ := io.ReadAll(file)
-	encoded := base64.StdEncoding.EncodeToString([]byte(b))
-	dataURL := fmt.Sprintf("data:%s;base64,%s", the_string_i_want, encoded)
+	videoFile := fmt.Sprintf("%s.%s", videoID, the_string_i_want)
+	path := filepath.Join(cfg.assetsRoot, videoFile)
+	osCreate(path)
+	//	encoded := base64.StdEncoding.EncodeToString([]byte(b))
+	//	dataURL := fmt.Sprintf("data:%s;base64,%s", the_string_i_want, encoded)
 	
 	videoData, err := cfg.db.GetVideo(videoID)
 	if err != nil {
