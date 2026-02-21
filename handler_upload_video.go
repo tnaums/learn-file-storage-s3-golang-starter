@@ -61,5 +61,10 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	if _, err = io.Copy(f, file); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error saving file", err)
 		return
-	}	
+	}
+
+	_, err := f.Seek(0, io.SeekStart)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error seeking start of file", err)
+	}
 }
