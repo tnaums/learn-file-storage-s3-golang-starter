@@ -66,5 +66,22 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	_, err := f.Seek(0, io.SeekStart)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error seeking start of file", err)
+		return
 	}
+
+	fileKey := getAssetPath(mediaType)
+	
+	input := &s3.PutObjectInput{
+		Bucket: aws.String(cfg.s3Bucket),
+		Key:    aws.String(fileKey),
+		Body:   f,
+		ContentType: aws.String(mediaType),
+	}
+
+	_, err = cfg.s3Client.PutObject(r.Context(), input)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error putting object in bucket", err)
+		return
+	}
+
 }
