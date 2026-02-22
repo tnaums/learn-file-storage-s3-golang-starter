@@ -1,9 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
+	"mime"
 	"net/http"
+	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
 )
@@ -20,17 +26,21 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 	// get userid from access token
 	token, _ := auth.GetBearerToken(r.Header)
-	userid, err := auth.ValidateJWT(token, cfg.secretPhrase)
+	userJwt, err := auth.ValidateJWT(token, cfg.jwtSecret)
 	if err != nil {
-		log.Printf("token is invalid: %s", tokenid)
+		log.Printf("token is invalid: %s", token)
 		w.WriteHeader(401)
 		return
 	}
 
-	c, err := cfg.queries.GetVideo(uid)
+	c, err := cfg.db.GetVideo(uid)
 	if err != nil {
-		log.Printf("Error retrieving video by id: %s", err)
-		w.WriteHeader(401)
+		respondWithError(w, http.StatusBadRequest, "Error retrieving video by id: %s", err)
+		return
+	}
+
+	if userJwt != c.UserID {
+		respondWithError(w, http.StatusUnauthorized, "user does not have access to video", nil)
 		return
 	}
 
@@ -63,18 +73,18 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, err := f.Seek(0, io.SeekStart)
+	_, err = f.Seek(0, io.SeekStart)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error seeking start of file", err)
 		return
 	}
 
 	fileKey := getAssetPath(mediaType)
-	
+
 	input := &s3.PutObjectInput{
-		Bucket: aws.String(cfg.s3Bucket),
-		Key:    aws.String(fileKey),
-		Body:   f,
+		Bucket:      aws.String(cfg.s3Bucket),
+		Key:         aws.String(fileKey),
+		Body:        f,
 		ContentType: aws.String(mediaType),
 	}
 
@@ -84,4 +94,18 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	newUrl := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, fileKey)
+	fmt.Printf("New url is: %s\n\n\n", newUrl)
+	c.VideoURL = &newUrl
+	err = cfg.db.UpdateVideo(c)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't update video", err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, c)
+}
+
+func getVideoAspectRatio(filePath string) (string, error) {
+	return "", nil
 }
