@@ -120,7 +120,14 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 }
 
 func processVideoForFastStart(filePath string) (string, error) {
-	return "", nil
+	outputFilePath := filePath + ".processing"
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4" outputFilePath)
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	
+	return outputFilePath, nil
 }
 
 func getVideoAspectRatio(filePath string) (string, error) {
