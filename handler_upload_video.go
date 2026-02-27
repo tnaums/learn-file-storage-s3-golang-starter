@@ -17,6 +17,25 @@ import (
 	"github.com/google/uuid"
 )
 
+func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video, error) {
+	if video.VideoURL == nil {
+		return video, nil
+	}
+	parts := strings.Split(*video.VideoURL, ",")
+	if len(parts) < 2 {
+		return video, nil // Or handle as an error if you prefer
+	}
+	// 3. Generate the URL
+	signedURL, err := generatePresignedURL(cfg.s3Client, parts[0], parts[1], 5*time.Minute)
+	if err != nil {
+		return video, err // Return the error to the caller!
+	}
+	
+	// 4. Update and return
+	video.VideoURL = &signedURL
+	return video, nil	
+}
+
 func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request) {
 	const maxBytes = 1 << 30 // 30 MB
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
@@ -143,8 +162,11 @@ func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime ti
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	}, s3.WithPresignExpires(expireTime))
+	if err != nil {
+		return "", err
+	}
 	
-	return "", nil
+	return output.URL, nil
 }
 
 func processVideoForFastStart(filePath string) (string, error) {
