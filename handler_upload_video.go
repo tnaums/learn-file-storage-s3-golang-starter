@@ -21,6 +21,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	const maxBytes = 1 << 30 // 30 MB
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 
+	
 	id := r.PathValue("videoID")
 	uid, err := uuid.Parse(id)
 	if err != nil {
@@ -122,8 +123,9 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	newUrl := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, fileKey)
-	fmt.Printf("New url is: %s\n\n\n", newUrl)
+	//	newUrl := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, fileKey)
+	url := fmt.Sprintf("%s,%s", cfg.s3Bucket, fileKey)	
+	//	fmt.Printf("New url is: %s\n\n\n", newUrl)
 	c.VideoURL = &newUrl
 	err = cfg.db.UpdateVideo(c)
 	if err != nil {
@@ -132,6 +134,17 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, http.StatusOK, c)
+}
+
+func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error)  {
+	presignClient := s3.NewPresignClient(s3Client)
+
+	output, err := presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(expireTime))
+	
+	return "", nil
 }
 
 func processVideoForFastStart(filePath string) (string, error) {
